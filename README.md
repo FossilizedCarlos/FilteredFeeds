@@ -42,10 +42,10 @@ You can have as many of these files as you want. Each one generates its own `.xm
 
 ---
 
-Your feed will be available at:
+Your feed will be available at (except with your own name):
 
 ```text
-https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/herd.xml
+https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/pod.xml
 ```
 
 ---
