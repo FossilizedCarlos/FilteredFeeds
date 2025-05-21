@@ -42,12 +42,6 @@ You can have as many of these files as you want. Each one generates its own `.xm
 
 ---
 
-### 2. GitHub Pages (Optional)
-
-Enable GitHub Pages under **Settings > Pages**. Choose:
-- Branch: `main`
-- Folder: `/ (root)`
-
 Your feed will be available at:
 
 ```text
@@ -82,7 +76,7 @@ Feeds are parsed using `feedparser` and filtered based on `title` keywords. Filt
 ---
 
 
-## 🔧 Dependencies
+## Dependencies
 
 These are installed automatically in the GitHub Actions:
 
