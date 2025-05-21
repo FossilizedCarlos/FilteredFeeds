@@ -43,22 +43,32 @@ def filter_episodes(feed_url, include=None, exclude=None, filter_type='include',
 def create_filtered_feed(feed_info, episodes, output_file):
     rss = Element('rss', version='2.0')
     channel = SubElement(rss, 'channel')
-
+    
     for tag in ['title', 'link', 'description']:
         if tag in feed_info:
             el = SubElement(channel, tag)
             el.text = feed_info[tag]
-
+    
     for entry in episodes:
         item = SubElement(channel, 'item')
         SubElement(item, 'title').text = entry.get('title')
         SubElement(item, 'link').text = entry.get('link')
         SubElement(item, 'guid').text = entry.get('guid', entry.get('link'))
         SubElement(item, 'pubDate').text = entry.get('published', '')
-
+    
         if 'description' in entry:
             SubElement(item, 'description').text = entry['description']
-
+    
+        # Add <enclosure> if available
+        if 'enclosures' in entry and entry.enclosures:
+            enclosure = entry.enclosures[0]  # use the first enclosure
+            if 'href' in enclosure:
+                SubElement(item, 'enclosure', {
+                    'url': enclosure['href'],
+                    'length': enclosure.get('length', '0'),
+                    'type': enclosure.get('type', 'audio/mpeg')
+                })
+    
     tree = ElementTree(rss)
     tree.write(output_file, encoding='utf-8', xml_declaration=True)
 
