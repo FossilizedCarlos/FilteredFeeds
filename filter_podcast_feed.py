@@ -40,35 +40,51 @@ def filter_episodes(feed_url, include=None, exclude=None, filter_type='include',
     return d.feed, episodes
 
 
-def create_filtered_feed(feed_info, episodes, output_file):
-    rss = Element('rss', version='2.0')
+def create_filtered_feed(feed_info, episodes, output_file, override_image=None):
+    rss = Element('rss', {
+        'version': '2.0',
+        'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd'
+    })
     channel = SubElement(rss, 'channel')
-    
+
     for tag in ['title', 'link', 'description']:
         if tag in feed_info:
             el = SubElement(channel, tag)
             el.text = feed_info[tag]
-    
+
+    # Add podcast image (from override or original feed)
+    image_url = override_image
+    if not image_url and 'image' in feed_info:
+        image_url = (
+            feed_info.image.get('href') or
+            feed_info.image.get('url') or
+            feed_info.image.get('link')
+        )
+    if image_url:
+        SubElement(channel, '{http://www.itunes.com/dtds/podcast-1.0.dtd}image', {
+            'href': image_url
+        })
+
     for entry in episodes:
         item = SubElement(channel, 'item')
         SubElement(item, 'title').text = entry.get('title')
         SubElement(item, 'link').text = entry.get('link')
         SubElement(item, 'guid').text = entry.get('guid', entry.get('link'))
         SubElement(item, 'pubDate').text = entry.get('published', '')
-    
+
         if 'description' in entry:
             SubElement(item, 'description').text = entry['description']
-    
-        # Add <enclosure> if available
+
+        # Add <enclosure> tag if available
         if 'enclosures' in entry and entry.enclosures:
-            enclosure = entry.enclosures[0]  # use the first enclosure
+            enclosure = entry.enclosures[0]
             if 'href' in enclosure:
                 SubElement(item, 'enclosure', {
                     'url': enclosure['href'],
                     'length': enclosure.get('length', '0'),
                     'type': enclosure.get('type', 'audio/mpeg')
                 })
-    
+
     tree = ElementTree(rss)
     tree.write(output_file, encoding='utf-8', xml_declaration=True)
 
@@ -89,6 +105,7 @@ for file in os.listdir():
         exclude = metadata.get('exclude', [])
         filter_type = metadata.get('filter type', 'include').strip().lower()
         episodes = metadata.get('episodes')
+        override_image = metadata.get('image')
 
         try:
             episodes = int(episodes)
@@ -103,4 +120,4 @@ for file in os.listdir():
             max_episodes=episodes
         )
 
-        create_filtered_feed(feed_info, filtered_episodes, f"{name}.xml")
+        create_filtered_feed(feed_info, filtered_episodes, f"{name}.xml", override_image)
