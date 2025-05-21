@@ -13,21 +13,25 @@ def extract_front_matter(md_content):
     return None
 
 
+def match_keywords(text, keywords):
+    if not keywords:
+        return True
+    if isinstance(keywords, str):
+        keywords = [keywords]
+    return any(kw.lower() in text.lower() for kw in keywords)
+
+
 def filter_episodes(feed_url, include=None, exclude=None, filter_type='include', max_episodes=None):
     d = feedparser.parse(feed_url)
     episodes = d.entries
 
     if filter_type == "exclude":
-        if exclude:
-            episodes = [ep for ep in episodes if exclude.lower() not in ep.title.lower()]
+        episodes = [ep for ep in episodes if not match_keywords(ep.title, exclude)]
     elif filter_type == "include":
-        if include:
-            episodes = [ep for ep in episodes if include.lower() in ep.title.lower()]
+        episodes = [ep for ep in episodes if match_keywords(ep.title, include)]
     elif filter_type == "both":
-        if exclude:
-            episodes = [ep for ep in episodes if exclude.lower() not in ep.title.lower()]
-        if include:
-            episodes = [ep for ep in episodes if include.lower() in ep.title.lower()]
+        episodes = [ep for ep in episodes if not match_keywords(ep.title, exclude)]
+        episodes = [ep for ep in episodes if match_keywords(ep.title, include)]
 
     episodes.sort(key=lambda ep: ep.get("published_parsed", datetime.min), reverse=True)
     if max_episodes:
@@ -71,8 +75,8 @@ for file in os.listdir():
 
         feed_url = metadata['feed']
         name = metadata['name']
-        include = metadata.get('include', '').strip()
-        exclude = metadata.get('exclude', '').strip()
+        include = metadata.get('include', [])
+        exclude = metadata.get('exclude', [])
         filter_type = metadata.get('filter type', 'include').strip().lower()
         episodes = metadata.get('episodes')
 
