@@ -1,0 +1,37 @@
+name: Generate Filtered Feeds from Markdown
+
+on:
+  push:
+    paths:
+      - '*.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install feedparser pyyaml
+
+      - name: Generate filtered feeds
+        run: python filter_podcast_feed.py
+
+      - name: Commit and push generated feeds
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add *.xml
+          git commit -m "Generated filtered feed(s)" || echo "No changes to commit"
+          git push

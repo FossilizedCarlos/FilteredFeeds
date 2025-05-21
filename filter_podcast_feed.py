@@ -1,22 +1,92 @@
-# filter_podcast_feed.py
+import os
+import re
 import feedparser
-import xml.etree.ElementTree as ET
-import requests
+import yaml
+from datetime import datetime
+from xml.etree.ElementTree import Element, SubElement, ElementTree
 
-FEED_URL = "https://www.omnycontent.com/d/playlist/e73c998e-6e60-432f-8610-ae210140c5b1/1508ddb2-0c9a-42f6-aafe-ae3300346aa9/bf391792-153e-41b3-9d3d-ae3300346ad8/podcast.rss"
-KEYWORD = "Best of The Herd"
 
-response = requests.get(FEED_URL)
-response.raise_for_status()
+def extract_front_matter(md_content):
+    match = re.search(r'^---\s*\n(.*?)\n---\s*\n', md_content, re.DOTALL)
+    if match:
+        return yaml.safe_load(match.group(1))
+    return None
 
-root = ET.fromstring(response.content)
-channel = root.find('channel')
-items = channel.findall('item')
 
-for item in items:
-    title_elem = item.find('title')
-    if title_elem is None or KEYWORD.lower() not in title_elem.text.lower():
-        channel.remove(item)
+def filter_episodes(feed_url, include=None, exclude=None, filter_type='include', max_episodes=None):
+    d = feedparser.parse(feed_url)
+    episodes = d.entries
 
-tree = ET.ElementTree(root)
-tree.write("filtered.xml", encoding="utf-8", xml_declaration=True)
+    if filter_type == "exclude":
+        if exclude:
+            episodes = [ep for ep in episodes if exclude.lower() not in ep.title.lower()]
+    elif filter_type == "include":
+        if include:
+            episodes = [ep for ep in episodes if include.lower() in ep.title.lower()]
+    elif filter_type == "both":
+        if exclude:
+            episodes = [ep for ep in episodes if exclude.lower() not in ep.title.lower()]
+        if include:
+            episodes = [ep for ep in episodes if include.lower() in ep.title.lower()]
+
+    episodes.sort(key=lambda ep: ep.get("published_parsed", datetime.min), reverse=True)
+    if max_episodes:
+        episodes = episodes[:max_episodes]
+
+    return d.feed, episodes
+
+
+def create_filtered_feed(feed_info, episodes, output_file):
+    rss = Element('rss', version='2.0')
+    channel = SubElement(rss, 'channel')
+
+    for tag in ['title', 'link', 'description']:
+        if tag in feed_info:
+            el = SubElement(channel, tag)
+            el.text = feed_info[tag]
+
+    for entry in episodes:
+        item = SubElement(channel, 'item')
+        SubElement(item, 'title').text = entry.get('title')
+        SubElement(item, 'link').text = entry.get('link')
+        SubElement(item, 'guid').text = entry.get('guid', entry.get('link'))
+        SubElement(item, 'pubDate').text = entry.get('published', '')
+
+        if 'description' in entry:
+            SubElement(item, 'description').text = entry['description']
+
+    tree = ElementTree(rss)
+    tree.write(output_file, encoding='utf-8', xml_declaration=True)
+
+
+# Main script
+for file in os.listdir():
+    if file.endswith('.md') and file.lower() != 'readme.md':
+        with open(file, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        metadata = extract_front_matter(content)
+        if not metadata or 'feed' not in metadata or 'name' not in metadata:
+            continue
+
+        feed_url = metadata['feed']
+        name = metadata['name']
+        include = metadata.get('include', '').strip()
+        exclude = metadata.get('exclude', '').strip()
+        filter_type = metadata.get('filter type', 'include').strip().lower()
+        episodes = metadata.get('episodes')
+
+        try:
+            episodes = int(episodes)
+        except:
+            episodes = None
+
+        feed_info, filtered_episodes = filter_episodes(
+            feed_url,
+            include=include,
+            exclude=exclude,
+            filter_type=filter_type,
+            max_episodes=episodes
+        )
+
+        create_filtered_feed(feed_info, filtered_episodes, f"{name}.xml")

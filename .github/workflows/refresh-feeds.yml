@@ -1,18 +1,19 @@
-name: Filter Podcast Feed
+name: Refresh Filtered Feeds
 
 on:
   schedule:
-    - cron: '0 6 * * *'
+    - cron: '0 */12 * * *'  # Every 12 hours
   workflow_dispatch:
-    
+
 permissions:
   contents: write
 
 jobs:
-  filter-feed:
+  refresh:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -21,15 +22,15 @@ jobs:
           python-version: '3.x'
 
       - name: Install dependencies
-        run: pip install feedparser requests
-    
-      - name: Run filtering script
+        run: pip install feedparser pyyaml
+
+      - name: Refresh filtered feeds
         run: python filter_podcast_feed.py
 
-      - name: Commit and push filtered feed
+      - name: Commit and push refreshed feeds
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add filtered.xml
-          git commit -m "Update filtered podcast feed" || echo "No changes"
+          git add *.xml
+          git commit -m "Refreshed filtered feed(s)" || echo "No changes to commit"
           git push
