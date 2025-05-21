@@ -18,8 +18,8 @@ jobs:
           python-version: '3.x'
 
       - name: Install dependencies
-        run: pip install feedparser
-
+          run: pip install feedparser requests
+    
       - name: Run filtering script
         run: python filter_podcast_feed.py
 
