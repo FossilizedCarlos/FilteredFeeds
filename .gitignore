@@ -387,3 +387,7 @@ xcuserdata
 # End of https://www.gitignore.io/api/c,ruby,xcode,swift,python,jekyll,clojure,swiftpm,objective-c,swiftpackagemanager
 
 .DS_Store
+.bundle
+.sass-cache
+_site
+Gemfile.lock
